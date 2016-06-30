@@ -10,9 +10,9 @@ and then you can use
 
     python run.py
 
-to get your bot going. You probably want to set up some different pairs in `run.py`, though. If this is already confusing, I'm super happy to help. [Just ask](https://github.com/buzzfeed-openlab/simple-slack-bot/issues)
+to get your bot going. You probably want to set up some different pairs in `run.py`, though. If this is already confusing, I'm super happy to help. [Just ask](https://github.com/buzzfeed-openlab/simple-slack-bot/issues).
 
-Where do you get an API_TOKEN? I am not even sure I know. I got mine at: <https://buzzfeed.slack.com/apps/new/A0F7YS25R-bots> but that URL is pretty specific to my Team.
+Where do you get an API_TOKEN? I am not even sure I know. I got mine at: <https://buzzfeed.slack.com/apps/new/A0F7YS25R-bots> but that URL is pretty specific to my Team. Try <https://my.slack.com/services/new/bot>, though.
 
 I'll be honest: it took me longer than it should have to work out how an oath token is different from a bot token is different from an app key.
 
