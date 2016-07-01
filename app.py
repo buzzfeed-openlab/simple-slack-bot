@@ -6,7 +6,8 @@ import datetime
 
 class Bot(object):
 
-    def __init__(self, token, searches):
+    def __init__(self, token, searches, boss):
+        self.boss = boss
         self.searches = searches
         self.client = SlackClient(token)
         self.username = {}
@@ -19,12 +20,13 @@ class Bot(object):
                 self.user_id = self.client.api_call("auth.test")['user_id']
                 self.username = self.client.api_call("auth.test")['user']
                 self._log(self.username + ": " + self.user_id)
-            except:
-                print Exception
+            except Exception as e:
+                self._log(e, level=' ERROR ')
             # Make a list of IM channels to listen to:
             for im in self.client.api_call("im.list")['ims']:
                 self.ims.add(im.get('id'))
                 self._log(str(self.ims))
+            # Find the User ID of the owner
 
             while True:
                 # self.process_messages(self.client.rtm_read())
@@ -39,12 +41,29 @@ class Bot(object):
         """
         print str(datetime.datetime.utcnow()) + level + str(message)
 
+    def relay_home(self, message):
+        """
+        Should have looked up the rooms that owners live in.
+        """
+        for bosser in self.boss:
+            im = self.client.api_call("im.open", user=bosser)
+            im_chan = im.get('channel')
+            if im_chan is not None:
+                im_chan_id = im_chan.get('id')
+            try:
+                if message.get('user') != self.user_id:
+                    self._log(message)
+                    self.client.api_call("chat.postMessage", as_user="true",
+                                         channel=im_chan_id,
+                                         text=message.get('text'))
+            except Exception as e:
+                self._log(e, level=' ERROR ')
+
     def filter_speak(self, room, message):
         """
         posts a message to a channel if it matches the call.
         """
-        for call in self.searches:
-            response = self.searches[call]
+        for call, response in self.searches.iteritems():
             if re.search(call, message):
                 self.client.api_call("chat.postMessage", as_user="true",
                                      channel=room, text=response)
@@ -54,26 +73,31 @@ class Bot(object):
             # We're only interested in entries of type "message"
             if msg['type'] == "message":
                 # TODO also check the text of expanded links.
+                if msg.get("channel") in self.ims:
+                    body = msg.get('text')
+                    relay_home(body)
                 if 'text' in msg:
-                    body = msg['text']
+                    body = msg.get('text')
                 elif 'subtype' in msg:
-                    if msg['subtype'] == "message_changed":
-                        body = msg['message']['text']
-                if not body:
+                    body = msg['message']['text']
+                if body is None:
                     self._log(msg + " didn't appear to have text or subtype?")
 
-                if 'user' in msg:
-                    if msg['user'] != self.user_id:
-                        self.filter_speak(message=body, room=msg['channel'])
+                if msg.get('user') != self.user_id:
+                    self.filter_speak(message=body, room=msg['channel'])
 
     def log_messages(self, messages):
         """
         Log everything. You don't really want to do this, but it is helpful for
         debugging, and for writing new functions.
         """
-        boring_types = (['presence_change', 'reconnect_url', 'user_typing'])
+        boring_type = (['dnd_updated_user', 'presence_change', 'reconnect_url',
+                        'user_typing', 'reaction_added','file_shared',
+                        'file_change'])
         for msg in messages:
             if msg['type'] == "message":
+                if msg.get("channel") in self.ims:
+                    self.relay_home(msg)
                 try:
                     self._log(msg.get("text"))
                 except:
@@ -84,17 +108,14 @@ class Bot(object):
                         self._log("The bot was mentioned!")
                     if msg.get("channel") in self.ims:
                         self._log("^^ this looks like a DM.")
-                except:
-                    self._log(Exception)
-            elif msg['type'] == "im_open":
+                except Exception as e:
+                    self._log(e, level=' ERROR ')
+            elif msg['type'] == "im_created":
                 self._log("Someone opened an IM with you.")
                 self.ims.add(im.get('id'))
-            elif msg['type'] not in boring_types:
-                # If it isn't a message what is it?
-                try:
-                    channel = msg.get("channel")
-                except:
-                    channel = "(no channel)"
+            elif msg['type'] not in boring_type:
+                self._log(msg)
+                channel = msg.get("channel")
                 log_string = str(msg['type']) + " in " + str(channel)
                 self._log(log_string)
                 # Search for DMs
