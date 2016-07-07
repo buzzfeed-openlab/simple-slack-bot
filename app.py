@@ -92,7 +92,7 @@ class Bot(object):
         debugging, and for writing new functions.
         """
         boring_type = (['dnd_updated_user', 'presence_change', 'reconnect_url',
-                        'user_typing', 'reaction_added','file_shared',
+                        'user_typing', 'reaction_added', 'file_shared',
                         'file_change'])
         for msg in messages:
             if msg['type'] == "message":
