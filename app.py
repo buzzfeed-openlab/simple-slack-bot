@@ -18,11 +18,11 @@ class Bot(object):
                 self.user_id = self.client.api_call("auth.test")['user_id']
                 self.username = self.client.api_call("auth.test")['user']
                 self._log(self.username + ": " + self.user_id)
-            except:
-                print Exception
+            except Exception as e:
+                self._log(e, level=' ERROR ')
             while True:
                 self.process_messages(self.client.rtm_read())
-                time.sleep(1)
+                time.sleep(0.25)
         else:
             self._log("Connection failed.")
 
@@ -30,14 +30,13 @@ class Bot(object):
         """
         TODO this should actually put logs somewhere useful;
         """
-        print str(datetime.datetime.utcnow()) + level + message
+        print str(datetime.datetime.utcnow()) + level + str(message)
 
     def filter_speak(self, room, message):
         """
         posts a message to a channel if it matches the call.
         """
-        for call in self.searches:
-            response = self.searches[call]
+        for call, response in self.searches.iteritems():
             if re.search(call, message):
                 self.client.api_call("chat.postMessage", as_user="true",
                                      channel=room, text=response)
@@ -48,13 +47,11 @@ class Bot(object):
             if msg['type'] == "message":
                 # TODO also check the text of expanded links.
                 if 'text' in msg:
-                    body = msg['text']
+                    body = msg.get('text')
                 elif 'subtype' in msg:
-                    if msg['subtype'] == "message_changed":
-                        body = msg['message']['text']
-                else:
+                    body = msg['message']['text']
+                if body is None:
                     self._log(msg + " didn't appear to have text or subtype?")
 
-                if 'user' in msg:
-                    if msg['user'] != self.user_id:
-                        self.filter_speak(message=body, room=msg['channel'])
+                if msg.get('user') != self.user_id:
+                    self.filter_speak(message=body, room=msg['channel'])
